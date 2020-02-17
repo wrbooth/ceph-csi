@@ -16,7 +16,7 @@
 
 CONTAINER_CMD?=docker
 
-CSI_IMAGE_NAME=$(if $(ENV_CSI_IMAGE_NAME),$(ENV_CSI_IMAGE_NAME),quay.io/cephcsi/cephcsi)
+CSI_IMAGE_NAME=$(if $(ENV_CSI_IMAGE_NAME),$(ENV_CSI_IMAGE_NAME),pyletime/cephcsi)
 CSI_IMAGE_VERSION=$(if $(ENV_CSI_IMAGE_VERSION),$(ENV_CSI_IMAGE_VERSION),v1.2.2)
 
 $(info cephcsi image settings: $(CSI_IMAGE_NAME) version $(CSI_IMAGE_VERSION))
@@ -24,6 +24,8 @@ $(info cephcsi image settings: $(CSI_IMAGE_NAME) version $(CSI_IMAGE_VERSION))
 GIT_COMMIT=$(shell git rev-list -1 HEAD)
 
 GO_PROJECT=github.com/ceph/ceph-csi
+
+ARCHS=amd64 arm arm64
 
 # go build flags
 LDFLAGS ?=
@@ -52,11 +54,19 @@ func-test:
 .PHONY: cephcsi
 cephcsi:
 	if [ ! -d ./vendor ]; then dep ensure -vendor-only; fi
-	CGO_ENABLED=0 GOOS=linux go build -a -ldflags '$(LDFLAGS) -extldflags "-static"' -o  _output/cephcsi ./cmd/
+	GOARM=
+	for arch in $(ARCHS); do \
+		if [ "$$arch" = "arm" ] ; then \
+			GOARM="GOARM=7"; \
+		fi; \
+		CGO_ENABLED=0 GOOS=linux GOARCH=$$arch $(GOARM) go build -a -ldflags '$(LDFLAGS) -extldflags "-static"' -o _output/cephcsi-$$arch ./cmd/; \
+	done
 
 image-cephcsi: cephcsi
-	cp _output/cephcsi deploy/cephcsi/image/cephcsi
-	$(CONTAINER_CMD) build -t $(CSI_IMAGE_NAME):$(CSI_IMAGE_VERSION) deploy/cephcsi/image
+	for arch in $(ARCHS); do \
+		cp _output/cephcsi-$$arch deploy/cephcsi/image/cephcsi-$$arch ; \
+		$(CONTAINER_CMD) build --rm -t $(CSI_IMAGE_NAME)-$$arch:$(CSI_IMAGE_VERSION) --build-arg ARCH=$$arch deploy/cephcsi/image ; \
+	done
 
 push-image-cephcsi: image-cephcsi
 	$(CONTAINER_CMD) push $(CSI_IMAGE_NAME):$(CSI_IMAGE_VERSION)

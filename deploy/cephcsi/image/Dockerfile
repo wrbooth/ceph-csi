@@ -1,4 +1,5 @@
-FROM ceph/ceph:v14.2
+ARG ARCH
+FROM pyletime/ceph-${ARCH}:v14.2.4
 LABEL maintainers="Ceph-CSI Authors"
 LABEL description="Ceph-CSI Plugin"
 
@@ -6,7 +7,8 @@ LABEL description="Ceph-CSI Plugin"
 #RUN rm -f /etc/yum.repos.d/ceph-iscsi.repo && yum -y update && yum clean all
 ENV CSIBIN=/usr/local/bin/cephcsi
 
-COPY cephcsi $CSIBIN
+ARG ARCH
+COPY cephcsi-${ARCH} $CSIBIN
 
 RUN chmod +x $CSIBIN
 
