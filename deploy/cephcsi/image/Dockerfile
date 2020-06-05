@@ -1,6 +1,6 @@
 ARG SRC_DIR="/go/src/github.com/ceph/ceph-csi/"
 ARG GO_ARCH
-ARG BASE_IMAGE=pyletime/ceph-arm:v14.2.9
+ARG BASE_IMAGE=pyletime/ceph-arm:v14.2.9-1
 
 FROM ${BASE_IMAGE} as builder
 
